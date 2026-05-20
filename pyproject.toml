@@ -1,14 +1,33 @@
 [project]
 name = "yohane-fa"
-version = "0.1.0"
-description = "Add your description here"
+dynamic = ["version"]
+description = "Custom forced alignement model for yohane"
 readme = "README.md"
-authors = [
-    { name = "NextFire", email = "git@yuru.moe" }
-]
+license = "AGPL-3.0-only"
+authors = [{ name = "NextFire", email = "git@yuru.moe" }]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = ["lightning==2.6.1", "tokenizers==0.22.2", "transformers==5.8.1"]
+
+[project.optional-dependencies]
+torch = [
+    "torch==2.12.0",
+    "torchaudio==2.11.0",
+    "torchcodec==0.12.0",
+    "torchvision==0.27.0",
+]
+
+[dependency-groups]
+dev = [
+    "datasets==4.8.5",
+    "ipykernel==7.2.0",
+    "ipywidgets==8.1.8",
+    "lightning[extra]==2.6.1",
+    "trackio[apple-gpu,gpu]==0.25.1",
+]
 
 [build-system]
-requires = ["uv_build>=0.11.14,<0.12.0"]
-build-backend = "uv_build"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"

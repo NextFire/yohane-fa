@@ -1,0 +1,50 @@
+trainer:
+  max_epochs: 200
+  log_every_n_steps: 10
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 1
+  callbacks:
+    - class_path: LearningRateMonitor
+    - class_path: EarlyStopping
+      init_args:
+        monitor: val_frame_accuracy
+        mode: max
+  logger:
+    - class_path: TensorBoardLogger
+      init_args:
+        save_dir: .
+    - class_path: yohane_fa.logger.TrackioLogger
+      init_args:
+        project: yohane-fa
+
+model:
+  gradient_checkpointing: true
+  attn_implementation: sdpa
+  config:
+    vocab_size: 30
+    do_stable_layer_norm: true
+    hidden_size: 256
+    num_hidden_layers: 10
+    num_attention_heads: 4
+    intermediate_size: 680 # 8/3 * hidden_size for SwiGLU parity → 9.49M total
+    conv_dim: [256, 256, 256, 256, 256, 256, 256]
+    # conv_stride: [5, 2, 2, 2, 2, 2, 2] (default) → product=320 → 20ms at 16kHz
+
+data:
+  dataset_path: NextFire/karaoke-mugen-timings
+  dataset_split: train
+  n_eval: 1000
+  batch_size: 1
+
+optimizer:
+  class_path: AdamW
+  init_args:
+    lr: 5e-4
+    weight_decay: 1e-2
+
+lr_scheduler:
+  class_path: ReduceLROnPlateau
+  init_args:
+    monitor: val_loss
+    factor: 0.5
+    patience: 5

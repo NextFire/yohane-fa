@@ -1,4 +1,4 @@
-from typing import Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import lightning as L
 import numpy as np
@@ -16,18 +16,19 @@ from transformers import (
     Wav2Vec2Processor,
 )
 
-from yohane_fa.model import ModelInput
+if TYPE_CHECKING:
+    from yohane_fa.model import ModelInput
+
+
+class DatasetRow(TypedDict):
+    audio: AudioDecoder
+    timings: list[list[DatasetTiming]]
 
 
 class DatasetTiming(TypedDict):
     text: str
     start: int
     end: int
-
-
-class DatasetRow(TypedDict):
-    audio: AudioDecoder
-    timings: list[list[DatasetTiming]]
 
 
 class PreparedExample(TypedDict):
@@ -141,7 +142,7 @@ class TimingsDataset(L.LightningDataModule):
 
         return {"input_values": input_values, "labels": labels}
 
-    def _collate(self, examples: list[PreparedExample]) -> ModelInput:
+    def _collate(self, examples: list[PreparedExample]) -> "ModelInput":
         input_values = [torch.Tensor(e["input_values"]) for e in examples]
         labels = [torch.Tensor(e["labels"]) for e in examples]
 

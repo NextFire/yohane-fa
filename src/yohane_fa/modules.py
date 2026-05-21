@@ -1,16 +1,11 @@
-import math
-
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import initialization as init
 from transformers.models.wav2vec2.modeling_wav2vec2 import (
     Wav2Vec2Attention,
     Wav2Vec2EncoderLayerStableLayerNorm,
     Wav2Vec2EncoderStableLayerNorm,
     Wav2Vec2FeatureProjection,
     Wav2Vec2FeedForward,
-    Wav2Vec2Model,
 )
 
 
@@ -96,13 +91,3 @@ class RMSNormWav2Vec2EncoderStableLayerNorm(Wav2Vec2EncoderStableLayerNorm):
     def __init__(self, config):
         super().__init__(config)
         self.layer_norm = nn.RMSNorm(config.hidden_size, eps=config.layer_norm_eps)
-
-
-class PatchedWav2Vec2Model(Wav2Vec2Model):
-    @torch.no_grad()
-    def _init_weights(self, module):
-        if isinstance(module, RMSNormWav2Vec2FeatureProjection):
-            k = math.sqrt(1 / module.projection.in_features)
-            init.uniform_(module.projection.weight, a=-k, b=k)
-        else:
-            super()._init_weights(module)

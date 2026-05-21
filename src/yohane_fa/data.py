@@ -52,7 +52,14 @@ class TimingsDataset(L.LightningDataModule):
         self.max_duration_seconds = max_duration_seconds
         self.batch_size = batch_size
 
-        self.normalizer = Sequence([BertNormalizer(), Replace(Regex(r"[^a-z']"), " ")])
+        self.normalizer = Sequence(
+            [
+                BertNormalizer(),
+                Replace("’", "'"),
+                Replace(Regex(r"[^a-z']"), " "),
+                Replace(Regex(r" +"), " "),
+            ]
+        )
 
         feature_extractor = Wav2Vec2FeatureExtractor(
             feature_size=1,
@@ -122,23 +129,28 @@ class TimingsDataset(L.LightningDataModule):
         labels = [pad_token_id] * output_length
         for line in example["timings"]:
             for timing in line:
-                value = cast(str, self.normalizer.normalize_str(timing["text"]))
-                if not value:
+                text = self.normalizer.normalize_str(timing["text"])
+                if not text:
                     continue
+                if len(text) >= 7 or text.strip().count(" ") > 0:
+                    # Suspicious alignment, skip it
+                    input_ids = [-200]
+                else:
+                    input_ids = cast(list[int], self.processor(text=text).input_ids)
                 start_frame = round(timing["start"] * frames_per_ms)
                 assert start_frame < output_length
                 end_frame = round(timing["end"] * frames_per_ms)
                 assert start_frame <= end_frame <= output_length
                 n_frames = end_frame - start_frame
-                inputs = self.processor(text=value)
-                input_ids = cast(list[int], inputs.input_ids)
                 for idx, frame in enumerate(range(start_frame, end_frame)):
-                    if labels[frame] == pad_token_id:
-                        token_idx = (idx * len(input_ids)) // n_frames
-                        labels[frame] = input_ids[token_idx]
-                    else:
+                    token_idx = (idx * len(input_ids)) // n_frames
+                    token = input_ids[token_idx]
+                    if labels[frame] in (pad_token_id, -200):
+                        labels[frame] = token
+                    elif token != -200:
                         # Mask overlapping alignments with -100 to ignore them in loss calculation
                         labels[frame] = -100
+        labels = [label if label != -200 else -100 for label in labels]
 
         return {"input_values": input_values, "labels": labels}
 

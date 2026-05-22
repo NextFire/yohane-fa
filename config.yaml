@@ -1,8 +1,9 @@
 trainer:
   max_epochs: 200
   log_every_n_steps: 10
+  precision: bf16-mixed
   gradient_clip_val: 1.0
-  accumulate_grad_batches: 1
+  accumulate_grad_batches: 4
   callbacks:
     - class_path: LearningRateMonitor
     - class_path: EarlyStopping
@@ -18,7 +19,7 @@ trainer:
         project: yohane-fa
 
 model:
-  attn_implementation: sdpa
+  attn_implementation: kernels-community/flash-attn2
   gradient_checkpointing: true
   config:
     hidden_size: 256
@@ -40,7 +41,7 @@ data:
   dataset_path: NextFire/karaoke-mugen-timings
   dataset_split: train
   n_eval: 1000
-  batch_size: 1
+  batch_size: 4
 
 optimizer:
   class_path: AdamW

@@ -6,7 +6,12 @@ readme = "README.md"
 license = "AGPL-3.0-only"
 authors = [{ name = "NextFire", email = "git@yuru.moe" }]
 requires-python = ">=3.14"
-dependencies = ["lightning==2.6.1", "tokenizers==0.22.2", "transformers==5.8.1"]
+dependencies = [
+    "kernels==0.14.1",
+    "lightning==2.6.1",
+    "tokenizers==0.22.2",
+    "transformers==5.8.1",
+]
 
 [project.optional-dependencies]
 torch = [

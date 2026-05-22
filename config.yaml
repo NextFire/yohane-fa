@@ -40,6 +40,7 @@ model:
 data:
   dataset_path: NextFire/karaoke-mugen-timings
   dataset_split: train
+  n_train: 19500
   n_eval: 1000
   batch_size: 4
 
@@ -54,4 +55,4 @@ lr_scheduler:
   init_args:
     monitor: val_loss
     factor: 0.5
-    patience: 5
+    patience: 3

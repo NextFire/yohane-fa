@@ -1,13 +1,13 @@
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Iterator, TypedDict, cast
 
 import lightning as L
 import numpy as np
 import torch
-from datasets import IterableDataset, load_dataset
+from datasets import load_dataset
 from numpy.typing import NDArray
 from tokenizers import Regex
 from tokenizers.normalizers import BertNormalizer, Replace, Sequence
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, IterableDataset
 from torchcodec.decoders import AudioDecoder
 from transformers import (
     Wav2Vec2CTCTokenizer,
@@ -36,11 +36,24 @@ class PreparedExample(TypedDict):
     labels: list[int]
 
 
+class SizedIterableDataset(IterableDataset):
+    def __init__(self, dataset, size: int) -> None:
+        self.dataset = dataset
+        self.size = size
+
+    def __iter__(self) -> Iterator:
+        return iter(self.dataset)
+
+    def __len__(self) -> int:
+        return self.size
+
+
 class TimingsDataset(L.LightningDataModule):
     def __init__(
         self,
         dataset_path: str,
         dataset_split: str,
+        n_train: int,
         n_eval: int,
         max_duration_seconds: int = 300,
         batch_size: int = 1,
@@ -48,6 +61,7 @@ class TimingsDataset(L.LightningDataModule):
         super().__init__()
         self.dataset_path = dataset_path
         self.dataset_split = dataset_split
+        self.n_train = n_train
         self.n_eval = n_eval
         self.max_duration_seconds = max_duration_seconds
         self.batch_size = batch_size
@@ -95,13 +109,19 @@ class TimingsDataset(L.LightningDataModule):
             input_columns=["audio"],
         )
         dataset = dataset.map(self._prepare, remove_columns=dataset.column_names)
-        self.val_dataset = dataset.take(self.n_eval)
-        self.train_dataset = dataset.skip(self.n_eval)
+        self.val_dataset = SizedIterableDataset(
+            dataset.take(self.n_eval),
+            self.n_eval,
+        )
+        self.train_dataset = SizedIterableDataset(
+            dataset.skip(self.n_eval),
+            self.n_train,
+        )
 
     def train_dataloader(self) -> Any:
         assert self.train_dataset
         return DataLoader(
-            self.train_dataset,  # pyright: ignore[reportArgumentType]
+            self.train_dataset,
             collate_fn=self._collate,
             batch_size=self.batch_size,
         )
@@ -109,7 +129,7 @@ class TimingsDataset(L.LightningDataModule):
     def val_dataloader(self) -> Any:
         assert self.val_dataset
         return DataLoader(
-            self.val_dataset,  # pyright: ignore[reportArgumentType]
+            self.val_dataset,
             batch_size=self.batch_size,
             collate_fn=self._collate,
         )
